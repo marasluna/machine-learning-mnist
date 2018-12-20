@@ -33,10 +33,29 @@ def predict():
     return json.dumps(response)
 
 
-@app.route('/test', methods=['POST'])
-def test():
-    return 'Test'
+@app.route('/score', methods=['POST'])
+def score():
+    # get payload
+    payload = json.loads(request.get_data())
+    # transform payload to dataset
+    dataset = json_to_dataset(payload)
+    # get target and coefficients
+    data = dataset.iloc[:, 1:]
+    target = dataset.iloc[:, 0]
+    # score
+    score = score_model(data, target)
+    # transform score to json
+    response = score_to_json(score)
+    return json.dumps(response)
 
+
+def json_to_dataset(payload):
+    panda_data = pd.DataFrame.from_dict(
+        payload["payload"]["dataset"], orient="index")
+    panda_data.columns = pd.to_numeric(panda_data.columns)
+    panda_data.sort_index(axis=1, inplace=True)
+
+    return panda_data
 
 def json_to_data(payload):
     panda_data = pd.DataFrame.from_dict(
@@ -52,6 +71,8 @@ def prediction_to_json(index, prediction):
                       data=prediction, columns=["prediction"])
     return json.loads(df.to_json())
 
+def score_to_json(score):
+	return {"score": score}
 
 def load_model():
     # conn = S3Connection()
@@ -67,3 +88,7 @@ def load_model():
 def predict_model(data):
     clf = load_model()
     return clf.predict(data).tolist()
+
+def score_model(data, target):
+	clf = load_model()
+	return clf.score(data, target)
