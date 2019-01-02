@@ -1,0 +1,11 @@
+{
+    "dev": {
+        "app_function": "machine_learning.app",
+        "aws_region": "us-west-1",
+        "profile_name": "flask",
+        "project_name": "machine-learning",
+        "runtime": "python3.6",
+        "s3_bucket": "machine-learning-mnist",
+        "slim_handler": true
+    }
+}

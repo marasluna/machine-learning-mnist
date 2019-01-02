@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import boto3
 
 from flask import Flask
 from sklearn.externals import joblib
@@ -8,11 +9,9 @@ from flask import json
 
 app = Flask(__name__)
 
-BUCKET_NAME = ''
+BUCKET_NAME = 'machine-learning-mnist'
 MODEL_FILE_NAME = 'logistic_regression.pkl'
-MODEL_LOCAL_PATH = '/Users/marasluna/projects/machine-learning-mnist/model'
-
-NUM_COEF = 784
+MODEL_LOCAL_PATH = '/tmp/' + MODEL_FILE_NAME
 
 
 @app.route('/')
@@ -57,6 +56,7 @@ def json_to_dataset(payload):
 
     return panda_data
 
+
 def json_to_data(payload):
     panda_data = pd.DataFrame.from_dict(
         payload["payload"]["data"], orient="index")
@@ -71,24 +71,25 @@ def prediction_to_json(index, prediction):
                       data=prediction, columns=["prediction"])
     return json.loads(df.to_json())
 
+
 def score_to_json(score):
-	return {"score": score}
+    return {"score": score}
+
 
 def load_model():
-    # conn = S3Connection()
-    # bucket = conn.create_bucket(BUCKET_NAME)
-    # key_obj = Key(bucket)
-    # key_obj.key = MODEL_FILE_NAME
-
-    # contents = key_obj.get_contents_to_filename(MODEL_LOCAL_PATH)
-    # return joblib.load(MODEL_LOCAL_PATH)
-    return joblib.load(MODEL_LOCAL_PATH + "/" + MODEL_FILE_NAME)
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(BUCKET_NAME)
+    obj = bucket.Object(MODEL_FILE_NAME)
+    with open(MODEL_LOCAL_PATH, 'wb') as data:
+        obj.download_fileobj(data)
+    return joblib.load(MODEL_LOCAL_PATH)
 
 
 def predict_model(data):
     clf = load_model()
     return clf.predict(data).tolist()
 
+
 def score_model(data, target):
-	clf = load_model()
-	return clf.score(data, target)
+    clf = load_model()
+    return clf.score(data, target)
