@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 import boto3
+import pickle
 
 from flask import Flask
-from sklearn.externals import joblib
 from flask import request
 from flask import json
 
@@ -11,8 +11,8 @@ app = Flask(__name__)
 
 BUCKET_NAME = 'machine-learning-mnist'
 MODEL_FILE_NAME = 'logistic_regression.pkl'
-MODEL_LOCAL_PATH = '/tmp/' + MODEL_FILE_NAME
 
+S3 = boto3.client('s3', region_name='us-west-1')
 
 @app.route('/')
 def index():
@@ -77,12 +77,10 @@ def score_to_json(score):
 
 
 def load_model():
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(BUCKET_NAME)
-    obj = bucket.Object(MODEL_FILE_NAME)
-    with open(MODEL_LOCAL_PATH, 'wb') as data:
-        obj.download_fileobj(data)
-    return joblib.load(MODEL_LOCAL_PATH)
+    response = S3.get_object(Bucket=BUCKET_NAME, Key=MODEL_FILE_NAME)
+    model_str = response['Body'].read()
+    model = pickle.loads(model_str)
+    return model
 
 
 def predict_model(data):
